@@ -2,8 +2,6 @@
 
 Discord-driven League of Legends custom-game series. The bot sets up series and posts tournament codes; the web app handles drafting, champion select, and stats. Orchestrated with .NET Aspire over Postgres.
 
-Stats are sourced through Riot's Tournament-V5 and Match-V5 APIs. The Tournament integration is stub-first: it runs against `tournament-stub-v5` with a dev key and switches to production via configuration, no code change.
-
 ## Stack
 
 - .NET Aspire (.NET 10 / C# 14)
@@ -36,18 +34,14 @@ Stats are sourced through Riot's Tournament-V5 and Match-V5 APIs. The Tournament
 
 ## Configuration
 
-Secrets are supplied to the AppHost as parameters, never committed. In development, put them in `CustomsBot.AppHost/appsettings.Development.json` (gitignored) or user-secrets:
+Secrets are supplied to the AppHost as parameters and are never committed. Set them with user-secrets:
 
-```json
-{
-  "Parameters": {
-    "discord-token": "<discord bot token>",
-    "riot-api-key": "<riot api key>"
-  }
-}
+```bash
+dotnet user-secrets set "Parameters:discord-token" "<discord bot token>" --project CustomsBot.AppHost
+dotnet user-secrets set "Parameters:riot-api-key" "<riot api key>" --project CustomsBot.AppHost
 ```
 
-The AppHost injects these into the bot and API at runtime. For production, supply the same `Parameters:*` keys via user-secrets, environment variables, or a secret store.
+The AppHost injects these into the bot and API at runtime.
 
 To switch Tournament-V5 from stub to production, set `Riot:Tournament:UseStub` to `false` and configure `Riot:Tournament:CallbackUrl` (and region) for the bot.
 
@@ -83,8 +77,3 @@ Commands that target a series show a select menu when you own more than one elig
 - Lobby: side/role assignment and ready check.
 - Champion select: tournament draft with bans, picks, swaps, and fearless exclusions.
 - Stats: search series and players, per-series and per-game detail, leaderboards.
-
-## Development notes
-
-- No Docker means Postgres cannot start locally; the schema can still be inspected with `dotnet ef migrations script --project CustomsBot.Data`.
-- The stub Tournament API does not return real match data, so stats capture requires a real tournament match or the production key.
