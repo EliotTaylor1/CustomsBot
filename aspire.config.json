@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "CustomsBot.AppHost/CustomsBot.AppHost.csproj"
+  }
+}

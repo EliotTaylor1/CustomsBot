@@ -1,0 +1,21 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.4.3">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>a686b049-e16e-4cdf-8455-8c01e49ec9cf</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CustomsBot.Server\CustomsBot.Server.csproj"/>
+        <ProjectReference Include="..\CustomsBot.MigrationService\CustomsBot.MigrationService.csproj"/>
+        <ProjectReference Include="..\CustomsBot.Bot\CustomsBot.Bot.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.4.3"/>
+        <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.4.3"/>
+    </ItemGroup>
+</Project>

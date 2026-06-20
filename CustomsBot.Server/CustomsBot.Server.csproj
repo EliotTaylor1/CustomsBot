@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.4.3"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CustomsBot.Data\CustomsBot.Data.csproj"/>
+        <ProjectReference Include="..\CustomsBot.Riot\CustomsBot.Riot.csproj"/>
+        <ProjectReference Include="..\CustomsBot.ServiceDefaults\CustomsBot.ServiceDefaults.csproj"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,67 @@
+.search-bar {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.search-bar input[type='text'], .search-bar > input:not([type]) {
+  padding: 0.45rem 0.6rem;
+  background: #0e1116;
+  border: 1px solid #2a3340;
+  border-radius: 6px;
+  color: inherit;
+  min-width: 240px;
+}
+.search-bar input[type='date'] {
+  background: #0e1116;
+  border: 1px solid #2a3340;
+  border-radius: 6px;
+  color: inherit;
+  padding: 0.3rem;
+}
+
+.stats-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.stats-cols h2 { font-size: 1.05rem; }
+
+.plain { list-style: none; padding: 0; }
+.plain li { padding: 0.25rem 0; border-bottom: 1px solid #1c2430; }
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.stats-table th, .stats-table td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid #1c2430;
+}
+.stats-table th { color: #8a93a0; font-weight: 600; }
+.stats-table tr.win td { background: rgba(34, 197, 94, 0.08); }
+.stats-table tr.loss td { background: rgba(239, 68, 68, 0.06); }
+
+.score-line { font-size: 1.2rem; }
+.game-block { margin: 1.2rem 0; }
+.game-block h2 { font-size: 1.05rem; margin-bottom: 0.3rem; }
+.bans { margin-bottom: 0.5rem; font-size: 0.9rem; }
+
+details.raw {
+  border: 1px solid #222a35;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.4rem;
+}
+details.raw summary { cursor: pointer; }
+details.raw pre {
+  overflow-x: auto;
+  font-size: 0.78rem;
+  background: #0b0e13;
+  padding: 0.6rem;
+  border-radius: 5px;
+}
