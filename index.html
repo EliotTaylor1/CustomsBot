@@ -3,20 +3,202 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CustomsBot</title>
+  <title>CustomsBot — League of Legends custom-game series for Discord</title>
+  <meta name="description" content="A Discord bot and web app for running League of Legends custom-game series: setup, drafting, tournament codes, and stats.">
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 4rem auto; padding: 0 1rem; line-height: 1.6; color: #1c1e21; }
-    a { color: #2b6cb0; }
-    code { background: #f0f1f3; padding: 0.1rem 0.3rem; border-radius: 4px; }
+    :root {
+      --bg: #0d1017;
+      --surface: #161b25;
+      --border: #232a37;
+      --text: #e6e9ef;
+      --muted: #9aa4b2;
+      --accent: #5865f2;
+      --accent-hover: #4752c4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 1.25rem; }
+
+    header.hero {
+      text-align: center;
+      padding: 5.5rem 1.25rem 4rem;
+      background: radial-gradient(120% 120% at 50% 0%, rgba(88,101,242,0.18), transparent 60%);
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 6vw, 3.4rem);
+      margin: 0 0 0.75rem;
+      letter-spacing: -0.02em;
+    }
+    .hero p.tagline {
+      font-size: clamp(1.05rem, 2.5vw, 1.3rem);
+      color: var(--muted);
+      max-width: 36rem;
+      margin: 0 auto 2rem;
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 0.8rem 1.5rem;
+      border-radius: 10px;
+      transition: background 0.15s ease;
+    }
+    .cta:hover { background: var(--accent-hover); }
+    .cta.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 500;
+    }
+    .cta.secondary:hover { background: var(--surface); }
+    .cta-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+
+    section { padding: 3rem 0; border-top: 1px solid var(--border); }
+    section h2 {
+      font-size: 1.5rem;
+      margin: 0 0 1.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .card h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+    ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+    ol.steps li {
+      position: relative;
+      padding: 0 0 1.25rem 3rem;
+      border-left: 2px solid var(--border);
+      margin-left: 1rem;
+    }
+    ol.steps li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    ol.steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: -1rem;
+      top: -0.1rem;
+      width: 2rem; height: 2rem;
+      display: grid; place-items: center;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    ol.steps strong { display: block; }
+    ol.steps span { color: var(--muted); }
+    code {
+      background: #0a0d13;
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.4rem;
+      border-radius: 5px;
+      font-size: 0.9em;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2.5rem 1.25rem 3.5rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    footer a { color: var(--text); }
   </style>
 </head>
 <body>
-  <h1>CustomsBot</h1>
-  <p>
-    A Discord bot and web app for running League of Legends custom-game series:
-    series setup, drafting and champion select, tournament codes, and stats.
-    It uses the Riot Account-V1, Match-V5, and Tournament-V5 APIs.
-  </p>
-  <p>Source code: <a href="https://github.com/EliotTaylor1/CustomsBot">github.com/EliotTaylor1/CustomsBot</a></p>
+  <header class="hero">
+    <div class="wrap">
+      <h1>CustomsBot</h1>
+      <p class="tagline">
+        Run League of Legends custom-game series from Discord — series setup,
+        live champion select, tournament codes, and post-game stats.
+      </p>
+      <div class="cta-row">
+        <!-- Replace YOUR_CLIENT_ID with the bot's Discord application (client) id. -->
+        <a class="cta" href="https://discord.com/oauth2/authorize?client_id=1510665372624228482&scope=bot+applications.commands&permissions=84992">
+          Add to Discord
+        </a>
+        <a class="cta secondary" href="https://github.com/EliotTaylor1/CustomsBot">View source</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>What it does</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Series setup</h3>
+          <p>Create best-of series with two persistent teams, fearless draft, map, and region — all from a slash command.</p>
+        </div>
+        <div class="card">
+          <h3>Live champion select</h3>
+          <p>A real-time web lobby and tournament-style draft: pick/ban order, swaps, ready checks, and side assignment.</p>
+        </div>
+        <div class="card">
+          <h3>Tournament codes</h3>
+          <p>Generates a Riot tournament code per game and posts it to your channel with each side's locked-in champions.</p>
+        </div>
+        <div class="card">
+          <h3>Stats</h3>
+          <p>Captures Match-V5 results automatically and serves series, player, and champion leaderboards.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>How to use it</h2>
+      <ol class="steps">
+        <li>
+          <strong>Add the bot to your server</strong>
+          <span>Use the <em>Add to Discord</em> button above. Each server's series stay private to that server.</span>
+        </li>
+        <li>
+          <strong>Link your Riot account</strong>
+          <span>Players run <code>/link-account</code> so tournament codes and stats can find them.</span>
+        </li>
+        <li>
+          <strong>Create a series</strong>
+          <span>Run <code>/create-series</code> to set the name, best-of, draft type, map, and region.</span>
+        </li>
+        <li>
+          <strong>Open a draft &amp; play</strong>
+          <span>Use <code>/series new-draft</code> to open the web lobby, ready up, run champion select, and start the game with the posted code.</span>
+        </li>
+        <li>
+          <strong>Review the stats</strong>
+          <span>Sign in to the web app with Discord to browse your servers' series, games, and leaderboards.</span>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    Source code:
+    <a href="https://github.com/EliotTaylor1/CustomsBot">github.com/EliotTaylor1/CustomsBot</a>
+  </footer>
 </body>
 </html>

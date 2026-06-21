@@ -1,8 +1,10 @@
 export interface LobbyPlayer {
   playerId: string;
+  discordId: string;
   username: string;
   avatar: string | null;
   hasPuuid: boolean;
+  isCaptain: boolean;
   side: 'blue' | 'red' | 'spectator';
   role: string | null;
   isReady: boolean;
@@ -15,6 +17,7 @@ export interface LobbyState {
   gameNumber: number;
   blueTeamName: string;
   redTeamName: string;
+  ownerDiscordId: string;
   players: LobbyPlayer[];
   canStart: boolean;
   started: boolean;

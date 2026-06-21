@@ -11,7 +11,9 @@ public class SeriesManagementCommands(SeriesManager manager) : ApplicationComman
     [SubSlashCommand("list", "List active series in this server")]
     public async Task<InteractionMessageProperties> ListAsync()
     {
-        var embed = await manager.BuildListAsync(Context.Interaction.GuildId ?? 0);
+        if (Context.Interaction.GuildId is not { } guildId)
+            return Ephemeral("Use this in a server.");
+        var embed = await manager.BuildListAsync(guildId);
         return new InteractionMessageProperties { Embeds = [embed] };
     }
 
@@ -45,7 +47,9 @@ public class SeriesManagementCommands(SeriesManager manager) : ApplicationComman
     private async Task<InteractionMessageProperties> ResolveAsync(
         string menuCustomId, string prompt, Func<Guid, Task<ManageResult>> apply)
     {
-        var eligible = await manager.EligibleAsync(Context.User.Id);
+        if (Context.Interaction.GuildId is not { } guildId)
+            return Ephemeral("Use this in a server.");
+        var eligible = await manager.EligibleAsync(Context.User.Id, guildId);
         if (eligible.Count == 0)
             return Ephemeral("You have no eligible series.");
         if (eligible.Count == 1)

@@ -9,9 +9,9 @@ namespace CustomsBot.Server.Stats;
 public class StatsQueryService(CustomsBotDbContext db)
 {
     public async Task<IReadOnlyList<SeriesSearchRow>> SearchSeriesAsync(
-        string? q, DateTimeOffset? from, DateTimeOffset? to, CancellationToken ct = default)
+        IReadOnlyList<ulong> guildIds, string? q, DateTimeOffset? from, DateTimeOffset? to, CancellationToken ct = default)
     {
-        var query = db.Series.AsQueryable();
+        var query = db.Series.Where(s => guildIds.Contains(s.GuildId));
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(s => EF.Functions.ILike(s.Name, $"%{q}%"));
         if (from is { } f)
@@ -27,9 +27,12 @@ public class StatsQueryService(CustomsBotDbContext db)
             .ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<PlayerSearchRow>> SearchPlayersAsync(string? q, CancellationToken ct = default)
+    public async Task<IReadOnlyList<PlayerSearchRow>> SearchPlayersAsync(
+        IReadOnlyList<ulong> guildIds, string? q, CancellationToken ct = default)
     {
-        var query = db.Players.AsQueryable();
+        // Only players who appear in a series in one of the viewer's servers.
+        var query = db.Players.Where(p =>
+            db.SeriesParticipants.Any(sp => sp.PlayerId == p.Id && guildIds.Contains(sp.Series.GuildId)));
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(p =>
                 EF.Functions.ILike(p.DiscordUsername, $"%{q}%") ||
@@ -42,14 +45,14 @@ public class StatsQueryService(CustomsBotDbContext db)
             .ToListAsync(ct);
     }
 
-    public async Task<SeriesDetailDto?> GetSeriesDetailAsync(Guid seriesId, CancellationToken ct = default)
+    public async Task<SeriesDetailDto?> GetSeriesDetailAsync(Guid seriesId, IReadOnlyList<ulong> guildIds, CancellationToken ct = default)
     {
         var series = await db.Series
             .Include(s => s.Teams)
             .Include(s => s.Games).ThenInclude(g => g.Players).ThenInclude(p => p.Player)
             .Include(s => s.Games).ThenInclude(g => g.DraftActions)
             .Include(s => s.Games).ThenInclude(g => g.Stats)
-            .FirstOrDefaultAsync(s => s.Id == seriesId, ct);
+            .FirstOrDefaultAsync(s => s.Id == seriesId && guildIds.Contains(s.GuildId), ct);
         if (series is null)
             return null;
 
@@ -71,7 +74,7 @@ public class StatsQueryService(CustomsBotDbContext db)
             series.Fearless, series.Region.ToString(), teamScores, games);
     }
 
-    public async Task<GameDetailDto?> GetGameDetailAsync(Guid gameId, CancellationToken ct = default)
+    public async Task<GameDetailDto?> GetGameDetailAsync(Guid gameId, IReadOnlyList<ulong> guildIds, CancellationToken ct = default)
     {
         var game = await db.Games
             .Include(g => g.BlueTeam)
@@ -79,7 +82,7 @@ public class StatsQueryService(CustomsBotDbContext db)
             .Include(g => g.Players).ThenInclude(p => p.Player)
             .Include(g => g.DraftActions)
             .Include(g => g.Stats)
-            .FirstOrDefaultAsync(g => g.Id == gameId, ct);
+            .FirstOrDefaultAsync(g => g.Id == gameId && guildIds.Contains(g.Series.GuildId), ct);
         if (game is null)
             return null;
 
@@ -92,9 +95,11 @@ public class StatsQueryService(CustomsBotDbContext db)
         return new GameDetailDto(summary, raw);
     }
 
-    public async Task<IReadOnlyList<ChampionLeaderboardRow>> ChampionLeaderboardAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<ChampionLeaderboardRow>> ChampionLeaderboardAsync(
+        IReadOnlyList<ulong> guildIds, CancellationToken ct = default)
     {
         var rows = await db.GamePlayerStats
+            .Where(s => guildIds.Contains(s.Game.Series.GuildId))
             .GroupBy(s => s.ChampionId)
             .Select(g => new { ChampionId = g.Key, Games = g.Count(), Wins = g.Count(x => x.Win) })
             .ToListAsync(ct);
@@ -105,9 +110,11 @@ public class StatsQueryService(CustomsBotDbContext db)
             .ToList();
     }
 
-    public async Task<IReadOnlyList<PlayerLeaderboardRow>> PlayerLeaderboardAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<PlayerLeaderboardRow>> PlayerLeaderboardAsync(
+        IReadOnlyList<ulong> guildIds, CancellationToken ct = default)
     {
         var rows = await db.GamePlayerStats
+            .Where(s => guildIds.Contains(s.Game.Series.GuildId))
             .GroupBy(s => s.PlayerId)
             .Select(g => new
             {

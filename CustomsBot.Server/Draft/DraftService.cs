@@ -17,10 +17,10 @@ public class DraftService(IServiceScopeFactory scopeFactory, ChampionCatalog cat
     private readonly ConcurrentDictionary<Guid, DraftState> _drafts = new();
 
     /// <summary>Lazily builds draft state from the persisted (drafting) game. Returns null if not draftable.</summary>
-    public async Task<DraftStateDto?> EnsureDraftAsync(Guid gameId, CancellationToken ct = default)
+    public async Task<DraftStateDto?> EnsureDraftAsync(Guid gameId, IReadOnlyList<ulong> guildIds, CancellationToken ct = default)
     {
         if (_drafts.TryGetValue(gameId, out var existing))
-            return ToDto(existing);
+            return guildIds.Contains(existing.GuildId) ? ToDto(existing) : null;
 
         await catalog.EnsureLoadedAsync(ct);
 
@@ -35,7 +35,8 @@ public class DraftService(IServiceScopeFactory scopeFactory, ChampionCatalog cat
             .FirstOrDefaultAsync(g => g.Id == gameId, ct);
 
         if (game is null || game.Status != GameStatus.Drafting ||
-            game.BlueTeamId is null || game.RedTeamId is null)
+            game.BlueTeamId is null || game.RedTeamId is null ||
+            !guildIds.Contains(game.Series.GuildId))
             return null;
 
         List<DraftSlot> SlotsFor(TeamSide side) => game.Players
@@ -71,6 +72,7 @@ public class DraftService(IServiceScopeFactory scopeFactory, ChampionCatalog cat
         {
             GameId = gameId,
             SeriesId = game.SeriesId,
+            GuildId = game.Series.GuildId,
             GameNumber = game.GameNumber,
             BlueTeamId = game.BlueTeamId.Value,
             RedTeamId = game.RedTeamId.Value,

@@ -5,6 +5,7 @@ import { Draft } from './Draft';
 import { Stats } from './Stats';
 import { SeriesReview } from './SeriesReview';
 import { GameDetail } from './GameDetail';
+import { useAuth, login } from './auth';
 import './lobby.css';
 import './draft.css';
 import './stats.css';
@@ -31,7 +32,18 @@ function parseRoute(): Route {
   return { name: 'landing' };
 }
 
+function LoginGate() {
+  return (
+    <div className="page login-gate">
+      <h1>Custom Games</h1>
+      <p className="muted">Sign in with Discord to see series from your servers.</p>
+      <button onClick={login}>Log in with Discord</button>
+    </div>
+  );
+}
+
 function App() {
+  const { user, loading } = useAuth();
   const [route, setRoute] = useState<Route>(parseRoute());
 
   useEffect(() => {
@@ -40,7 +52,10 @@ function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  if (route.name === 'lobby') return <Lobby gameId={route.gameId} />;
+  if (loading) return <div className="page"><p className="muted">Loading…</p></div>;
+  if (!user) return <LoginGate />;
+
+  if (route.name === 'lobby') return <Lobby gameId={route.gameId} user={user} />;
   if (route.name === 'draft') return <Draft gameId={route.gameId} />;
   if (route.name === 'series') return <SeriesReview seriesId={route.seriesId} />;
   if (route.name === 'game') return <GameDetail gameId={route.gameId} />;
