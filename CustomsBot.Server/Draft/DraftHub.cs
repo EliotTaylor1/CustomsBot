@@ -1,3 +1,4 @@
+using CustomsBot.Server.Auth;
 using Microsoft.AspNetCore.SignalR;
 
 namespace CustomsBot.Server.Draft;
@@ -13,10 +14,11 @@ public class DraftHub(DraftService drafts) : Hub
 
     public async Task JoinDraft(Guid gameId)
     {
+        var state = await drafts.EnsureDraftAsync(gameId, Context.User!.GuildIds());
+        if (state is null)
+            return; // Not draftable or the viewer isn't in this series' server.
         await Groups.AddToGroupAsync(Context.ConnectionId, Group(gameId));
-        var state = await drafts.EnsureDraftAsync(gameId);
-        if (state is not null)
-            await Clients.Caller.SendAsync("DraftUpdated", state);
+        await Clients.Caller.SendAsync("DraftUpdated", state);
     }
 
     public async Task<ClaimResultDto?> ClaimSlot(Guid gameId, Guid slotId, string? token)

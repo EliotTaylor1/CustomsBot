@@ -26,10 +26,10 @@ public class SeriesManager(CustomsBotDbContext db, IConfiguration configuration)
 
     private static string ShortId(Guid id) => id.ToString("N")[..8];
 
-    /// <summary>Series owned by the caller that can still be managed (not Completed).</summary>
-    public Task<List<Series>> EligibleAsync(ulong ownerId) =>
+    /// <summary>Series in this server owned by the caller that can still be managed (not Completed).</summary>
+    public Task<List<Series>> EligibleAsync(ulong ownerId, ulong guildId) =>
         db.Series
-            .Where(s => s.OwnerDiscordId == ownerId && s.Status != SeriesStatus.Complete)
+            .Where(s => s.OwnerDiscordId == ownerId && s.GuildId == guildId && s.Status != SeriesStatus.Complete)
             .Include(s => s.Teams)
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync();

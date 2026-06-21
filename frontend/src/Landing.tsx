@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { SeriesSummary } from './types';
+import { logout } from './auth';
 
 export function Landing() {
   const [series, setSeries] = useState<SeriesSummary[]>([]);
@@ -40,12 +41,13 @@ export function Landing() {
         <h1>Custom Games</h1>
         <a href="#/stats">Stats →</a>
         <button onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</button>
+        <button onClick={logout}>Log out</button>
       </header>
 
       {error && <p className="error">{error}</p>}
 
       {series.length === 0 && !loading && (
-        <p className="muted">No series yet. Create one with <code>/create-series</code> in Discord.</p>
+        <p className="muted">No series in your servers yet. Create one with <code>/create-series</code> in Discord.</p>
       )}
 
       <ul className="series-list">

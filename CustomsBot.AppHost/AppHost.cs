@@ -10,6 +10,8 @@ var migrations = builder.AddProject<Projects.CustomsBot_MigrationService>("migra
 
 var discordToken = builder.AddParameter("discord-token", secret: true);
 var riotApiKey = builder.AddParameter("riot-api-key", secret: true);
+var discordClientId = builder.AddParameter("discord-client-id");
+var discordClientSecret = builder.AddParameter("discord-client-secret", secret: true);
 
 var bot = builder.AddProject<Projects.CustomsBot_Bot>("bot")
     .WithHttpEndpoint()
@@ -26,6 +28,8 @@ var server = builder.AddProject<Projects.CustomsBot_Server>("server")
     .WaitFor(customsbotdb)
     .WaitForCompletion(migrations)
     .WithEnvironment("Riot__ApiKey", riotApiKey)
+    .WithEnvironment("Discord__ClientId", discordClientId)
+    .WithEnvironment("Discord__ClientSecret", discordClientSecret)
     .WithExternalHttpEndpoints();
 
 var webfrontend = builder.AddViteApp("webfrontend", "../frontend")

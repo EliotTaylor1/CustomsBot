@@ -14,24 +14,25 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
 {
     private readonly ConcurrentDictionary<Guid, LobbyState> _lobbies = new();
 
-    public async Task<IReadOnlyList<SeriesSummaryDto>> ListSeriesAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<SeriesSummaryDto>> ListSeriesAsync(IReadOnlyList<ulong> guildIds, CancellationToken ct = default)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CustomsBotDbContext>();
         return await db.Series
+            .Where(s => guildIds.Contains(s.GuildId))
             .OrderByDescending(s => s.CreatedAt)
             .Select(s => new SeriesSummaryDto(
                 s.Id, s.Name, s.Status.ToString(), s.BestOf, s.Participants.Count))
             .ToListAsync(ct);
     }
 
-    public async Task<LobbyStateDto?> CreateLobbyAsync(Guid seriesId, CancellationToken ct = default)
+    public async Task<LobbyStateDto?> CreateLobbyAsync(Guid seriesId, IReadOnlyList<ulong> guildIds, CancellationToken ct = default)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CustomsBotDbContext>();
 
         var series = await LoadSeriesAsync(db, seriesId, ct);
-        if (series is null || series.Teams.Count < 2)
+        if (series is null || series.Teams.Count < 2 || !guildIds.Contains(series.GuildId))
             return null;
 
         var gameNumber = await db.Games.CountAsync(g => g.SeriesId == seriesId, ct) + 1;
@@ -52,10 +53,10 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
     /// Returns lobby state, lazily building it from a persisted game in <c>lobby</c> status
     /// (e.g. one opened by the bot's <c>/series new-draft</c>). Null if not a lobby.
     /// </summary>
-    public async Task<LobbyStateDto?> EnsureLobbyAsync(Guid gameId, CancellationToken ct = default)
+    public async Task<LobbyStateDto?> EnsureLobbyAsync(Guid gameId, IReadOnlyList<ulong> guildIds, CancellationToken ct = default)
     {
         if (_lobbies.TryGetValue(gameId, out var cached))
-            return ToDto(cached);
+            return guildIds.Contains(cached.GuildId) ? ToDto(cached) : null;
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CustomsBotDbContext>();
@@ -65,7 +66,7 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
             return null;
 
         var series = await LoadSeriesAsync(db, game.SeriesId, ct);
-        if (series is null || series.Teams.Count < 2)
+        if (series is null || series.Teams.Count < 2 || !guildIds.Contains(series.GuildId))
             return null;
 
         return ToDto(_lobbies.GetOrAdd(game.Id, BuildState(game, series)));
@@ -80,20 +81,28 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
     private static LobbyState BuildState(Game game, Series series)
     {
         var teams = series.Teams.OrderBy(t => t.Name).ToList();
+        var captainIds = teams
+            .Where(t => t.CaptainPlayerId is not null)
+            .Select(t => t.CaptainPlayerId!.Value)
+            .ToHashSet();
         var players = series.Participants.ToDictionary(
             p => p.PlayerId,
             p => new LobbyPlayer
             {
                 PlayerId = p.PlayerId,
+                DiscordId = p.Player.DiscordId,
                 Username = p.Player.DiscordUsername,
                 Avatar = p.Player.DiscordAvatar,
                 HasPuuid = p.Player.Puuid is not null,
+                IsCaptain = captainIds.Contains(p.PlayerId),
             });
 
         return new LobbyState
         {
             GameId = game.Id,
             SeriesId = series.Id,
+            GuildId = series.GuildId,
+            OwnerDiscordId = series.OwnerDiscordId,
             SeriesName = series.Name,
             GameNumber = game.GameNumber,
             BlueTeamId = teams[0].Id,
@@ -107,14 +116,27 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
     public LobbyStateDto? GetState(Guid gameId) =>
         _lobbies.TryGetValue(gameId, out var state) ? ToDto(state) : null;
 
-    public LobbyStateDto? AssignSide(Guid gameId, Guid playerId, string side)
+    /// <summary>Players may move themselves between sides; the series owner or a team captain may move anyone.</summary>
+    public LobbyStateDto? AssignSide(Guid gameId, Guid playerId, string side, ulong callerDiscordId)
     {
         if (!TryParseSide(side, out var parsed))
             return null;
-        return Mutate(gameId, playerId, p => p.Side = parsed);
+        if (!_lobbies.TryGetValue(gameId, out var state))
+            return null;
+
+        lock (state.Gate)
+        {
+            if (state.Started || !state.Players.TryGetValue(playerId, out var player))
+                return null;
+            if (player.DiscordId != callerDiscordId && !CanManage(state, callerDiscordId))
+                return null;
+            player.Side = parsed;
+            state.Sequence++;
+            return ToDto(state);
+        }
     }
 
-    public LobbyStateDto? SetRole(Guid gameId, Guid playerId, string? role)
+    public LobbyStateDto? SetRole(Guid gameId, Guid playerId, string? role, ulong callerDiscordId)
     {
         Role? parsed = null;
         if (!string.IsNullOrEmpty(role))
@@ -123,13 +145,13 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
                 return null;
             parsed = r;
         }
-        return Mutate(gameId, playerId, p => p.Role = parsed);
+        return Mutate(gameId, playerId, callerDiscordId, p => p.Role = parsed);
     }
 
-    public LobbyStateDto? SetReady(Guid gameId, Guid playerId, bool ready) =>
-        Mutate(gameId, playerId, p => p.IsReady = ready);
+    public LobbyStateDto? SetReady(Guid gameId, Guid playerId, bool ready, ulong callerDiscordId) =>
+        Mutate(gameId, playerId, callerDiscordId, p => p.IsReady = ready);
 
-    public LobbyStateDto? SetTeamName(Guid gameId, string side, string name)
+    public LobbyStateDto? SetTeamName(Guid gameId, string side, string name, ulong callerDiscordId)
     {
         if (!_lobbies.TryGetValue(gameId, out var state))
             return null;
@@ -139,8 +161,8 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
 
         lock (state.Gate)
         {
-            if (state.Started)
-                return ToDto(state);
+            if (state.Started || !CanManage(state, callerDiscordId))
+                return null;
             if (string.Equals(side, "blue", StringComparison.OrdinalIgnoreCase))
                 state.BlueTeamName = trimmed;
             else if (string.Equals(side, "red", StringComparison.OrdinalIgnoreCase))
@@ -152,14 +174,14 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
         }
     }
 
-    public async Task<LobbyStateDto?> StartAsync(Guid gameId, CancellationToken ct = default)
+    public async Task<LobbyStateDto?> StartAsync(Guid gameId, ulong callerDiscordId, CancellationToken ct = default)
     {
         if (!_lobbies.TryGetValue(gameId, out var state))
             return null;
 
         lock (state.Gate)
         {
-            if (state.Started || !CanStart(state))
+            if (state.Started || !CanStart(state) || !CanManage(state, callerDiscordId))
                 return null;
             state.Started = true;
         }
@@ -202,7 +224,8 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
         }
     }
 
-    private LobbyStateDto? Mutate(Guid gameId, Guid playerId, Action<LobbyPlayer> apply)
+    /// <summary>Role/ready are self-only: the caller may only mutate the player bound to their own Discord id.</summary>
+    private LobbyStateDto? Mutate(Guid gameId, Guid playerId, ulong callerDiscordId, Action<LobbyPlayer> apply)
     {
         if (!_lobbies.TryGetValue(gameId, out var state))
             return null;
@@ -211,11 +234,17 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
         {
             if (state.Started || !state.Players.TryGetValue(playerId, out var player))
                 return null;
+            if (player.DiscordId != callerDiscordId)
+                return null;
             apply(player);
             state.Sequence++;
             return ToDto(state);
         }
     }
+
+    private static bool CanManage(LobbyState state, ulong callerDiscordId) =>
+        callerDiscordId == state.OwnerDiscordId ||
+        state.Players.Values.Any(p => p.DiscordId == callerDiscordId && p.IsCaptain);
 
     private static bool CanStart(LobbyState state)
     {
@@ -232,14 +261,14 @@ public class LobbyService(IServiceScopeFactory scopeFactory)
     {
         var players = state.Players.Values
             .Select(p => new LobbyPlayerDto(
-                p.PlayerId, p.Username, p.Avatar, p.HasPuuid,
+                p.PlayerId, p.DiscordId.ToString(), p.Username, p.Avatar, p.HasPuuid, p.IsCaptain,
                 p.Side.ToString().ToLowerInvariant(), p.Role?.ToString(), p.IsReady))
             .OrderBy(p => p.Username)
             .ToList();
 
         return new LobbyStateDto(
             state.GameId, state.SeriesId, state.SeriesName, state.GameNumber,
-            state.BlueTeamName, state.RedTeamName, players,
+            state.BlueTeamName, state.RedTeamName, state.OwnerDiscordId.ToString(), players,
             CanStart(state), state.Started, state.Sequence);
     }
 }

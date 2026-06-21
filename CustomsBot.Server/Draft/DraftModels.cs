@@ -49,6 +49,7 @@ internal sealed class DraftState
 {
     public required Guid GameId { get; init; }
     public required Guid SeriesId { get; init; }
+    public required ulong GuildId { get; init; }
     public required int GameNumber { get; init; }
     public required Guid BlueTeamId { get; init; }
     public required Guid RedTeamId { get; init; }

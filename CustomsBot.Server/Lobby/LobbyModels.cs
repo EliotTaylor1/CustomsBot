@@ -10,6 +10,8 @@ public record LobbyStateDto(
     int GameNumber,
     string BlueTeamName,
     string RedTeamName,
+    // Discord id as a string: 64-bit snowflakes exceed JS safe-integer range.
+    string OwnerDiscordId,
     IReadOnlyList<LobbyPlayerDto> Players,
     bool CanStart,
     bool Started,
@@ -17,9 +19,11 @@ public record LobbyStateDto(
 
 public record LobbyPlayerDto(
     Guid PlayerId,
+    string DiscordId,
     string Username,
     string? Avatar,
     bool HasPuuid,
+    bool IsCaptain,
     string Side,
     string? Role,
     bool IsReady);
@@ -36,6 +40,8 @@ internal sealed class LobbyState
 {
     public required Guid GameId { get; init; }
     public required Guid SeriesId { get; init; }
+    public required ulong GuildId { get; init; }
+    public required ulong OwnerDiscordId { get; init; }
     public required string SeriesName { get; init; }
     public required int GameNumber { get; init; }
 
@@ -55,9 +61,11 @@ internal sealed class LobbyState
 internal sealed class LobbyPlayer
 {
     public required Guid PlayerId { get; init; }
+    public required ulong DiscordId { get; init; }
     public required string Username { get; init; }
     public string? Avatar { get; init; }
     public bool HasPuuid { get; init; }
+    public bool IsCaptain { get; init; }
 
     public TeamSide Side { get; set; } = TeamSide.Spectator;
     public Role? Role { get; set; }

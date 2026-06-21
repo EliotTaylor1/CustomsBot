@@ -20,11 +20,14 @@ public class SeriesCommands(CustomsBotDbContext db) : ApplicationCommandModule<A
         if (bestOf % 2 == 0)
             return new InteractionMessageProperties { Content = "Best-of must be an odd number.", Flags = MessageFlags.Ephemeral };
 
+        if (Context.Interaction.GuildId is not { } guildId)
+            return new InteractionMessageProperties { Content = "Use this in a server.", Flags = MessageFlags.Ephemeral };
+
         var series = new Series
         {
             Id = Guid.NewGuid(),
             Name = name,
-            GuildId = Context.Interaction.GuildId ?? 0,
+            GuildId = guildId,
             ChannelId = Context.Channel.Id,
             DraftType = draftType,
             Fearless = fearless,
